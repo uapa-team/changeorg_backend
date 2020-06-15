@@ -36,3 +36,5 @@ database.sqlite3
 
 .vscode
 .env
+
+log
