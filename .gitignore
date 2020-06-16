@@ -33,6 +33,7 @@ cert.pem
 #configs
 config/conf.json
 database.sqlite3
+database2.sqlite3
 
 .vscode
 .env

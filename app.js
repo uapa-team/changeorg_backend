@@ -7,6 +7,7 @@ const Promise = require("promise");
 const fs = require("fs");
 const sqlite3 = require("sqlite3").verbose();
 const db = new sqlite3.Database("database.sqlite3");
+const db2 = new sqlite3.Database("database2.sqlite3");
 const nodemailer = require("nodemailer");
 const hbs = require("handlebars");
 
@@ -381,6 +382,8 @@ app.post("/request", (req, res) => {
   res.status(200).send({ status: "Confirmed" });
 });
 
+//START LAB ROUTES (plagiarism of code from Fortich)
+
 app.post("/lab/login", (req, res) => {
   if (req.body.username && req.body.password) {
     if (/^[a-zA-Z]/.test(req.body.username)) {
@@ -437,6 +440,62 @@ app.get("/lab/valid", (req, res) => {
     return;
   }
 });
+
+app.post("/lab/register", (req, res) => {
+  const token = req.headers.token;
+  if (token) {
+    try {
+      const decoded = jwt.decode(token, app.get("jwtTokenSecret"));
+      if (decoded.exp <= parseInt(moment().format("X"))) {
+        res.status(401).send({ error: "Access token has expired" });
+        return;
+      } else {
+        if (
+          !req.body.dni ||
+          !req.body.full_name ||
+          !req.body.role ||
+          !req.body.building ||
+          !req.body.lab ||
+          !req.body.admission_time ||
+          !req.body.departure_time
+        ) {
+          res.status(400).send({ error: "Bad request, some field is missing" });
+          return;
+        } else {
+          try {
+            db2.run(
+              "INSERT INTO register (dni, full_name, username, role, " +
+                "building, lab, admission_time, departure_time) VALUES" +
+                `('${req.body.dni}', '${req.body.full_name}', '${decoded.user_name}', ` +
+                `'${req.body.role}', '${req.body.building}', '${req.body.lab}', ` +
+                `'${req.body.admission_time}', '${req.body.departure_time}')`,
+              (err_ins) => {
+                if (err_ins) {
+                  console.log(err_ins);
+                  res.status(500).send({ error: err_ins });
+                  return;
+                }
+                res.status(201).send({ ok: "created register successfully" });
+                return;
+              }
+            );
+          } catch (err_db) {
+            res.status(500).send({ error: err_db });
+            return;
+          }
+        }
+      }
+    } catch (err) {
+      res.status(500).send({ error: "Access token could not be decoded" });
+      return;
+    }
+  } else {
+    res.status(401).send({ error: "Access token is missing" });
+    return;
+  }
+});
+
+//END LAB ROUTES
 
 const port = process.env.PORT || 3001;
 app.listen(port, function () {
